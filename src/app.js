@@ -165,9 +165,18 @@ function read(data, status, request) {
       var device = ajResp.rooms[e1.itemIndex].groups[e2.sectionIndex].items[e2.itemIndex];
       var pd = parseDevice(device);
 
-      var deviceNextState = pd.pebbleCommands.indexOf(pd.state) > -1 ? 
+      console.log("Blubb");
+      console.log(pd.standard);
+      var deviceNextState;
+      if(pd.standard.length>0) {
+        deviceNextState = pd.standard;  
+        console.log("Standard Command set");
+      }
+      else {
+        deviceNextState = pd.pebbleCommands.indexOf(pd.state) > -1 ? 
           (pd.pebbleCommands.indexOf(pd.state) < pd.pebbleCommands.length -1 ?
            pd.pebbleCommands[pd.pebbleCommands.indexOf(pd.state)+1] : pd.pebbleCommands[0]) : pd.pebbleCommands[0];
+      }
 
       var switch_url_str = encodeURI(fhem_url_str + '?XHR=1&cmd.' + pd.name + '=set ' + pd.name + ' ' + deviceNextState);
 
@@ -245,10 +254,11 @@ function parseDevice(device) {
     var deviceName = device.name;
     var deviceAlias = device.alias ? device.alias.trim() : deviceName;    
     var deviceState = device.state;
+    var deviceStandard = device.pebbleStandard && device.pebbleStandard.length > 0 ? device.pebbleStandard : "";
 	
 	return {commands: deviceCommands, pebbleCommands: devicePebbleCommands,
 			readOnly: deviceReadOnly, name: deviceName, alias: deviceAlias,
-          state: deviceState};
+          state: deviceState, standard: deviceStandard};
 }
 
 function exit() {
