@@ -8,6 +8,7 @@ package main;
 use strict;
 use warnings;
 use POSIX;
+use JSON;
 
 sub CommandPebble($$);
 sub JsonEscape($);
@@ -60,6 +61,7 @@ sub copyDeviceValues($) {
 		pebbleOrder => $attr{$d}{pebbleOrder},
 		pebbleReadOnly => $attr{$d}{pebbleReadOnly},	
 		pebbleHide => $attr{$d}{pebbleHide},
+		pebbleStandard => $attr{$d}{pebbleStandard},
 		type => $defs{$d}{TYPE},	
 		state => $defs{$d}{STATE}
 	);
@@ -114,10 +116,12 @@ sub CommandPebble($$) {
 				$d{pebbleCmd} = 'on:off' if(!$d{pebbleCmd});
 				$d{pebbleOrder} = -1 if(!$d{pebbleOrder});
 				$d{pebbleHide} = 0 if(!$d{pebbleHide});
+				$d{pebbleStandard} = "" if(!$d{pebbleStandard});
 				$d{pebbleReadOnly} = 0 if(!$d{pebbleReadOnly});
-				$d{subtitle} = 'Status: ' . $d{state} if($d{state});
+				$d{subtitle} = $d{state} if($d{state});
+				$d{subtitle} = $d{pebbleStandard} if($d{pebbleStandard});
 				$d{alias} = $d{name} if(!$d{alias});
-				push @devices, \%d;
+				push @devices, \%d unless ($d{pebbleHide});
 				$c = $c + scalar keys @devices;
 			} (sort keys $devs{$room}{$group});
 			my @sorted_devices = sort { $a->{title} cmp $b->{title} } @devices;
@@ -128,7 +132,7 @@ sub CommandPebble($$) {
 				subtitle => '',
 				items => \@sorted_devices
 			);
-			push @groups, \%g;
+			push @groups, \%g if (scalar keys @devices);
 		} (sort keys $devs{$room});
 		my @sorted_groups = sort { $a->{pebbleOrder} cmp $b->{pebbleOrder} } @groups;
 		my $title = $room; $title =~ s/_/ /g;
