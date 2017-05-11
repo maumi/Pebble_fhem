@@ -11,13 +11,14 @@
 
 // configuration:
 var scheme = 'http';
-var auth   = 'user:password@';
-var host1   = '192.168.1.210';
-var host2   = '192.168.192.42';
-var port   = '8083';
-var timeout = 25000;
+var auth   = 'user:pw@';
+var host2   = '192.168.2.210';
+var host1   = 'ip';
+var port2   = '8083';
+var port = '8088';
+var timeouts = 25000;
 
-var rooms = "3_Wohnzimmer|7_Bad|6_Balkon|2_Sensoren|5_Kueche|4_Schlafzimmer|1_Favoriten";
+var rooms = "Wohnzimmer|1_Favoriten";
 
 var timer = null;
 
@@ -63,7 +64,9 @@ var singleRoomMenu = null;
 
 var detailedDeviceMenu = null;
 
-var fhem_url_str = scheme + '://' + host1  + ':' + port  + '/fhem';
+var detailedDeviceMenu2 = null;
+
+var fhem_url_str = scheme + '://' + auth + host1  + ':' + port  + '/fhem';
 
 // url connection string to FHEM Pebble Module
 var url_str = encodeURI(fhem_url_str + '?cmd=pebble '+rooms_regex+'&XHR=1');
@@ -77,13 +80,16 @@ AJ({url: url_str, type: 'json'},
   function(error, status, request) {
     console.log("Did not reach host1 ("+url_str+").");
     url_str = url_str.replace(host1, host2);
+    url_str = url_str.replace(port, port2);
     fhem_url_str = fhem_url_str.replace(host1, host2);
+    fhem_url_str = fhem_url_str.replace(port, port2);
     host = host2;
     console.log("Using host2 ("+url_str+").");
     
     // second try:
     AJ({url: url_str, type:'json'}, read, ajax_error);
   }
+   //timeout: 2000
 ); 
   
 // log standard ajax error
@@ -131,7 +137,7 @@ function read(data, status, request) {
   menu.on('select', function(e1) {
 
     if (timer !== null) clearTimeout(timer);
-    timer = setTimeout(exit,timeout);
+    timer = setTimeout(exit,timeouts);
     
     // e1 = {menu: "the menu object", section: "the menu section object", sectionIndex, item: "the menu item object", itemIndex}
 
@@ -157,7 +163,7 @@ function read(data, status, request) {
     // on-click on device
     singleRoomMenu.on('select', function(e2) {
       if (timer !== null)  clearTimeout(timer);
-      timer = setTimeout(exit,timeout);
+      timer = setTimeout(exit,timeouts);
 
 
       // e2 = {menu: "the menu object", section: "the menu section object", sectionIndex, item: "the menu item object", itemIndex}
@@ -199,7 +205,7 @@ function read(data, status, request) {
     singleRoomMenu.on('longSelect', function(e2) {
 
        if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(exit,timeout);
+      timer = setTimeout(exit,timeouts);
       // build detailed state menu
 
       var device = ajResp.rooms[e1.itemIndex].groups[e2.sectionIndex].items[e2.itemIndex];
@@ -219,7 +225,7 @@ function read(data, status, request) {
       if(!pd.readOnly) {
         detailedDeviceMenu.on('select', function(e3) {
           if (timer !== null) clearTimeout(timer);
-          timer = setTimeout(exit,timeout);
+          timer = setTimeout(exit,timeouts);
           
           AJ({ url: e3.item.switch_url, type: 'get' }, 
              function(data, status, request) { console.log("Got " + e3.item.switch_url); }, 
@@ -233,6 +239,24 @@ function read(data, status, request) {
           e2.menu.item(e2.sectionIndex, e2.itemIndex, device);
 
         });	
+        
+        detailedDeviceMenu.on('longSelect', function(e3) {
+        
+                var device = ajResp.rooms[e2.itemIndex].groups[e3.sectionIndex].items[e3.itemIndex];
+                var pd = parseDevice(device);
+      
+                var states = [];
+                pd.pebbleCommands.forEach(function(state) {
+                  states.push({
+                  switch_url: encodeURI(fhem_url_str + '?XHR=1&cmd.' + pd.name + '=set ' + pd.name + ' ' + state),
+                  title: state
+                  });
+                });
+
+      detailedDeviceMenu2 = new UI.Menu({sections: [{ title: pd.alias + "("+pd.state+")", items: states}] });
+      detailedDeviceMenu2.show();
+          
+        });
       }
 
     });
@@ -242,7 +266,7 @@ function read(data, status, request) {
   
   //show Menu after its loaded
   splashWindow.hide();
-  timer = setTimeout(exit,timeout);
+  timer = setTimeout(exit,timeouts);
   menu.show();
 }
 
